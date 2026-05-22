@@ -59,3 +59,13 @@ spec:
       workspaces:
         - name: source
           workspace: output
+
+  finally:
+    - name: deploy
+      taskRef:
+        name: deploy
+      params:
+        - name: app-name
+          value: $(params.app-name)
+        - name: build-image
+          value: $(params.build-image)

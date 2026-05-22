@@ -14,7 +14,9 @@ spec:
   params:
     - name: repo-url
       value: https://github.com/your-repo.git
+
     - name: app-name
       value: myapp
+
     - name: build-image
-      value: image-registry.openshift-image-registry.svc:5000/$NAMESPACE/myapp
+      value: image-registry.openshift-image-registry.svc:5000/$(context.pipelineRun.namespace)/myapp
