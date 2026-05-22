@@ -20,16 +20,9 @@ spec:
         #!/usr/bin/env sh
         set -eu
         echo "Removing all files from ${WORKSPACE_SOURCE_PATH} ..."
-        # Delete any existing contents of the directory if it exists.
-        #
-        # We don't just "rm -rf ${WORKSPACE_SOURCE_PATH}" because ${WORKSPACE_SOURCE_PATH} might be "/"
-        # or the root of a mounted volume.
         if [ -d "${WORKSPACE_SOURCE_PATH}" ] ; then
-          # Delete non-hidden files and directories
           rm -rf "${WORKSPACE_SOURCE_PATH:?}"/*
-          # Delete files and directories starting with . but excluding ..
           rm -rf "${WORKSPACE_SOURCE_PATH}"/.[!.]*
-          # Delete files and directories starting with .. plus any other character
           rm -rf "${WORKSPACE_SOURCE_PATH}"/..?*
         fi
 ---
@@ -57,3 +50,35 @@ spec:
         python -m pip install --upgrade pip wheel
         pip install -r requirements.txt
         nosetests $(params.args)
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: deploy
+spec:
+  params:
+    - name: app-name
+      type: string
+    - name: build-image
+      type: string
+
+  steps:
+    - name: deploy-to-openshift
+      image: quay.io/openshift/origin-cli:latest
+      script: |
+        #!/usr/bin/env bash
+        set -e
+
+        echo "Deploying application $(params.app-name)..."
+
+        oc create deployment $(params.app-name) \
+          --image=$(params.build-image) \
+          --dry-run=client -o yaml | oc apply -f -
+
+        echo "Deployment created or updated."
+
+        # Optional: expose service
+        oc expose deployment $(params.app-name) --port=8080 || true
+
+        # Wait for rollout
+        oc rollout status deployment/$(params.app-name)
